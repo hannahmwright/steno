@@ -3,6 +3,7 @@ import OSLog
 
 actor AppPreferencesStore {
     private let storageURL: URL
+    private var hasPreparedStorageDirectory = false
     private static let logger = Logger(subsystem: "io.stenoapp.steno", category: "AppPreferencesStore")
 
     init(storageURL: URL = AppPreferencesStore.defaultStorageURL()) {
@@ -23,7 +24,7 @@ actor AppPreferencesStore {
             return prefs
         } catch {
             Self.logger.error(
-                "Preferences load failed for path \(self.storageURL.path, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                "Preferences load failed for path \(self.storageURL.path, privacy: .private): \(error.localizedDescription, privacy: .public)"
             )
             return .default
         }
@@ -34,22 +35,36 @@ actor AppPreferencesStore {
         normalized.normalize()
 
         do {
-            let dir = storageURL.deletingLastPathComponent()
-            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            try ensureStorageDirectoryExists()
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(normalized)
             try data.write(to: storageURL, options: .atomic)
         } catch {
             Self.logger.error(
-                "Preferences save failed for path \(self.storageURL.path, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                "Preferences save failed for path \(self.storageURL.path, privacy: .private): \(error.localizedDescription, privacy: .public)"
             )
         }
     }
 
+    private func ensureStorageDirectoryExists() throws {
+        guard !hasPreparedStorageDirectory else { return }
+        let dir = storageURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        hasPreparedStorageDirectory = true
+    }
+
     private static func defaultStorageURL() -> URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        let appSupport: URL
+        if let resolved = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            appSupport = resolved
+        } else {
+            appSupport = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support", isDirectory: true)
+            logger.fault(
+                "Application Support directory lookup failed. Falling back to \(appSupport.path, privacy: .private)."
+            )
+        }
         return appSupport
             .appendingPathComponent("Steno", isDirectory: true)
             .appendingPathComponent("preferences.json")
@@ -66,7 +81,7 @@ actor AppPreferencesStore {
                 try fm.copyItem(at: oldDir, to: newDir)
             } catch {
                 logger.error(
-                    "Preferences migration copy failed from \(oldDir.path, privacy: .public) to \(newDir.path, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                    "Preferences migration copy failed from \(oldDir.path, privacy: .private) to \(newDir.path, privacy: .private): \(error.localizedDescription, privacy: .public)"
                 )
             }
         }

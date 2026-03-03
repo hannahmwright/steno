@@ -17,6 +17,7 @@ public enum HistoryStoreError: Error, LocalizedError {
 public actor HistoryStore: HistoryStoreProtocol {
     private var entries: [TranscriptEntry] = []
     private var hasLoaded = false
+    private var hasPreparedStorageDirectory = false
     private let storageURL: URL
     private let clipboardService: ClipboardService
     private let maxEntries: Int
@@ -116,13 +117,19 @@ public actor HistoryStore: HistoryStoreProtocol {
         encoder.dateEncodingStrategy = .iso8601
 
         do {
+            try ensureStorageDirectoryExists()
             let data = try encoder.encode(entries)
-            let dir = storageURL.deletingLastPathComponent()
-            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             try data.write(to: storageURL, options: [.atomic])
         } catch {
             throw HistoryStoreError.persistenceFailed
         }
+    }
+
+    private func ensureStorageDirectoryExists() throws {
+        guard !hasPreparedStorageDirectory else { return }
+        let dir = storageURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        hasPreparedStorageDirectory = true
     }
 
     private static func loadEntries(from url: URL) throws -> [TranscriptEntry] {
@@ -137,8 +144,16 @@ public actor HistoryStore: HistoryStoreProtocol {
     }
 
     private static func defaultStorageURL() -> URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        let appSupport: URL
+        if let resolved = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            appSupport = resolved
+        } else {
+            appSupport = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support", isDirectory: true)
+            StenoKitDiagnostics.logger.fault(
+                "Application Support directory lookup failed. Falling back to \(appSupport.path, privacy: .private)."
+            )
+        }
 
         return appSupport
             .appendingPathComponent("Steno", isDirectory: true)
