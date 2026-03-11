@@ -80,7 +80,11 @@ final class MoonshineModelDownloader: ObservableObject {
             let localURL = destinationURL.appendingPathComponent(fileName)
 
             do {
-                try await downloadFile(from: remoteURL, to: localURL, fileIndex: index, fileCount: missing.count)
+                try await downloadFileWithRetry(
+                    from: remoteURL, to: localURL,
+                    fileIndex: index, fileCount: missing.count,
+                    maxRetries: 3
+                )
             } catch is CancellationError {
                 await MainActor.run { status = .idle }
                 return
@@ -93,30 +97,66 @@ final class MoonshineModelDownloader: ObservableObject {
         await MainActor.run { status = .completed }
     }
 
+    private nonisolated func downloadFileWithRetry(
+        from remoteURL: URL,
+        to localURL: URL,
+        fileIndex: Int,
+        fileCount: Int,
+        maxRetries: Int
+    ) async throws {
+        var lastError: Error?
+        for attempt in 0...maxRetries {
+            if attempt > 0 {
+                // Wait before retrying: 2s, 4s, 8s
+                let delay = UInt64(pow(2.0, Double(attempt))) * 1_000_000_000
+                try await Task.sleep(nanoseconds: delay)
+                await MainActor.run {
+                    status = .downloading(fileIndex: fileIndex, fileCount: fileCount, fileProgress: 0)
+                }
+            }
+            do {
+                try await downloadFile(from: remoteURL, to: localURL, fileIndex: fileIndex, fileCount: fileCount)
+                return // success
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                lastError = error
+            }
+        }
+        throw lastError!
+    }
+
     private nonisolated func downloadFile(
         from remoteURL: URL,
         to localURL: URL,
         fileIndex: Int,
         fileCount: Int
     ) async throws {
-        let delegate = ProgressDelegate { [weak self] progress in
-            Task { @MainActor in
+        let delegate = DownloadDelegate()
+
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 300   // 5 min per stalled connection
+        config.timeoutIntervalForResource = 3600 // 1 hour total per file
+        let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
+
+        let task = session.downloadTask(with: remoteURL)
+
+        // Report progress from delegate, throttled to 10Hz
+        delegate.onProgress = { @Sendable progress in
+            Task { @MainActor [weak self] in
                 self?.status = .downloading(fileIndex: fileIndex, fileCount: fileCount, fileProgress: progress)
             }
         }
 
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 300   // 5 min per stalled request
-        config.timeoutIntervalForResource = 1800 // 30 min total per file
-        let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
-        defer { session.finishTasksAndInvalidate() }
-
-        let (tempDownloadURL, response) = try await session.download(from: remoteURL)
-
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
-            throw DownloadError.httpError(code)
+        // Use a continuation to bridge the delegate-based API
+        let tempDownloadURL: URL = try await withCheckedThrowingContinuation { continuation in
+            delegate.completion = { result in
+                continuation.resume(with: result)
+            }
+            task.resume()
         }
+
+        session.finishTasksAndInvalidate()
 
         try Task.checkCancellation()
 
@@ -132,7 +172,6 @@ final class MoonshineModelDownloader: ObservableObject {
     }
 
     private nonisolated static func cdnBaseURL(for preset: MoonshineModelPreset) -> URL {
-        // Pattern: https://download.moonshine.ai/model/{directoryName}/quantized/
         URL(string: "https://download.moonshine.ai/model/\(preset.directoryName)/quantized/")!
     }
 
@@ -148,15 +187,12 @@ final class MoonshineModelDownloader: ObservableObject {
     }
 }
 
-/// Reports download progress via a callback, throttled to avoid flooding the main thread.
-private final class ProgressDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
-    private let onProgress: @Sendable (Double) -> Void
+/// Delegate that tracks download progress and completion via a continuation.
+private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     private let lock = NSLock()
     private var lastReportedTime: CFAbsoluteTime = 0
-
-    init(onProgress: @escaping @Sendable (Double) -> Void) {
-        self.onProgress = onProgress
-    }
+    var completion: ((Result<URL, Error>) -> Void)?
+    var onProgress: (@Sendable (Double) -> Void)?
 
     func urlSession(
         _ session: URLSession,
@@ -167,7 +203,6 @@ private final class ProgressDelegate: NSObject, URLSessionDownloadDelegate, @unc
     ) {
         guard totalBytesExpectedToWrite > 0 else { return }
 
-        // Throttle UI updates to at most every 0.1s
         let now = CFAbsoluteTimeGetCurrent()
         lock.lock()
         let shouldReport = now - lastReportedTime >= 0.1
@@ -175,8 +210,8 @@ private final class ProgressDelegate: NSObject, URLSessionDownloadDelegate, @unc
         lock.unlock()
 
         if shouldReport {
-            let progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
-            onProgress(min(progress, 1.0))
+            let progress = min(Double(totalBytesWritten) / Double(totalBytesExpectedToWrite), 1.0)
+            onProgress?(progress)
         }
     }
 
@@ -185,6 +220,35 @@ private final class ProgressDelegate: NSObject, URLSessionDownloadDelegate, @unc
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
-        // Required by protocol; actual file handling is done in the async caller.
+        // Copy the file before URLSession deletes it
+        let safeCopy = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString + ".download")
+        do {
+            try FileManager.default.copyItem(at: location, to: safeCopy)
+
+            if let httpResponse = downloadTask.response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+                try? FileManager.default.removeItem(at: safeCopy)
+                completion?(.failure(DownloadError.httpError(httpResponse.statusCode)))
+            } else {
+                completion?(.success(safeCopy))
+            }
+        } catch {
+            completion?(.failure(error))
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error {
+            completion?(.failure(error))
+        }
+    }
+
+    private enum DownloadError: LocalizedError {
+        case httpError(Int)
+        var errorDescription: String? {
+            switch self {
+            case .httpError(let code): return "Server returned HTTP \(code)"
+            }
+        }
     }
 }
