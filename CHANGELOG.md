@@ -7,6 +7,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-03-11
+
+### Fixed
+- Recording startup now validates microphone access before switching into the listening UI, so permission failures are surfaced instead of looking like a ready-but-dead recorder.
+- Moonshine streaming now flushes buffered audio correctly on stop, preserves finalization errors instead of silently returning an empty transcript, and uses a mic capture path closer to Moonshine's upstream implementation.
+- Engine readiness checks now verify the configured model directory rather than only the preset default path, preventing false "model ready" states in settings.
+
 ## [0.1.7] - 2026-03-03
 
 ### Changed

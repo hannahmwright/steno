@@ -3,6 +3,27 @@
   <channel>
     <title>Voce</title>
     <item>
+      <title>Version 0.4.1</title>
+      <sparkle:version>4</sparkle:version>
+      <sparkle:shortVersionString>0.4.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>Voce 0.4.1</h2>
+        <ul>
+          <li>Fixed recording startup to surface microphone permission failures instead of appearing ready without capturing audio</li>
+          <li>Fixed Moonshine streaming stop/finalization so buffered audio is flushed and transcription errors are not silently dropped</li>
+          <li>Fixed model readiness checks to validate the configured Moonshine model directory correctly</li>
+        </ul>
+      ]]></description>
+      <pubDate>Wed, 11 Mar 2026 19:05:23 +0000</pubDate>
+      <enclosure
+        url="https://github.com/hannahmwright/voce/releases/download/v0.4.1/Voce-0.4.1.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="8xJW/JD4VXz+mijZTiloKVv7Yj+2rSzWMlxLS0yCJFYd/G7a3Z+5xOj3BirCLtG8lu4FvsSpKb4bsPi6RWfnCA=="
+        length="28036040"
+      />
+    </item>
+    <item>
       <title>Version 0.4.0</title>
       <sparkle:version>3</sparkle:version>
       <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
