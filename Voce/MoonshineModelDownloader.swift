@@ -17,6 +17,14 @@ final class MoonshineModelDownloader: ObservableObject {
 
     private var downloadTask: Task<Void, Never>?
 
+    /// URLSession with generous timeouts for large model files.
+    private nonisolated static let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 600   // 10 min if connection stalls
+        config.timeoutIntervalForResource = 3600 // 1 hour max per file
+        return URLSession(configuration: config)
+    }()
+
     /// Overall progress from 0.0 to 1.0 across all files.
     var overallProgress: Double {
         switch status {
@@ -79,17 +87,31 @@ final class MoonshineModelDownloader: ObservableObject {
             let remoteURL = baseURL.appendingPathComponent(fileName)
             let localURL = destinationURL.appendingPathComponent(fileName)
 
-            do {
-                try await downloadFileWithRetry(
-                    from: remoteURL, to: localURL,
-                    fileIndex: index, fileCount: missing.count,
-                    maxRetries: 3
-                )
-            } catch is CancellationError {
-                await MainActor.run { status = .idle }
-                return
-            } catch {
-                await MainActor.run { status = .failed("Failed to download \(fileName): \(error.localizedDescription)") }
+            var lastError: Error?
+            let maxRetries = 3
+
+            for attempt in 0...maxRetries {
+                if attempt > 0 {
+                    let delay = UInt64(pow(2.0, Double(attempt))) * 1_000_000_000
+                    try? await Task.sleep(nanoseconds: delay)
+                    await MainActor.run {
+                        status = .downloading(fileIndex: index, fileCount: missing.count, fileProgress: 0)
+                    }
+                }
+                do {
+                    try await downloadFile(from: remoteURL, to: localURL, fileIndex: index, fileCount: missing.count)
+                    lastError = nil
+                    break
+                } catch is CancellationError {
+                    await MainActor.run { status = .idle }
+                    return
+                } catch {
+                    lastError = error
+                }
+            }
+
+            if let lastError {
+                await MainActor.run { status = .failed("Failed to download \(fileName): \(lastError.localizedDescription)") }
                 return
             }
         }
@@ -97,74 +119,59 @@ final class MoonshineModelDownloader: ObservableObject {
         await MainActor.run { status = .completed }
     }
 
-    private nonisolated func downloadFileWithRetry(
-        from remoteURL: URL,
-        to localURL: URL,
-        fileIndex: Int,
-        fileCount: Int,
-        maxRetries: Int
-    ) async throws {
-        var lastError: Error?
-        for attempt in 0...maxRetries {
-            if attempt > 0 {
-                // Wait before retrying: 2s, 4s, 8s
-                let delay = UInt64(pow(2.0, Double(attempt))) * 1_000_000_000
-                try await Task.sleep(nanoseconds: delay)
-                await MainActor.run {
-                    status = .downloading(fileIndex: fileIndex, fileCount: fileCount, fileProgress: 0)
-                }
-            }
-            do {
-                try await downloadFile(from: remoteURL, to: localURL, fileIndex: fileIndex, fileCount: fileCount)
-                return // success
-            } catch is CancellationError {
-                throw CancellationError()
-            } catch {
-                lastError = error
-            }
-        }
-        throw lastError!
-    }
-
+    /// Downloads a single file using streamed bytes with chunked disk writes.
+    /// Runs entirely off the main thread; only hops to MainActor for progress updates.
     private nonisolated func downloadFile(
         from remoteURL: URL,
         to localURL: URL,
         fileIndex: Int,
         fileCount: Int
     ) async throws {
-        let delegate = DownloadDelegate()
+        let (asyncBytes, response) = try await Self.session.bytes(from: remoteURL)
 
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 300   // 5 min per stalled connection
-        config.timeoutIntervalForResource = 3600 // 1 hour total per file
-        let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
-
-        let task = session.downloadTask(with: remoteURL)
-
-        // Report progress from delegate, throttled to 10Hz
-        delegate.onProgress = { @Sendable progress in
-            Task { @MainActor [weak self] in
-                self?.status = .downloading(fileIndex: fileIndex, fileCount: fileCount, fileProgress: progress)
-            }
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw DownloadError.httpError(code)
         }
 
-        // Use a continuation to bridge the delegate-based API
-        let tempDownloadURL: URL = try await withCheckedThrowingContinuation { continuation in
-            delegate.completion = { result in
-                continuation.resume(with: result)
-            }
-            task.resume()
-        }
-
-        session.finishTasksAndInvalidate()
-
-        try Task.checkCancellation()
-
+        let expectedLength = httpResponse.expectedContentLength
         let tempURL = localURL.appendingPathExtension("download")
 
-        // Move the URLSession temp file to our staging location.
         try? FileManager.default.removeItem(at: tempURL)
-        try FileManager.default.moveItem(at: tempDownloadURL, to: tempURL)
+        FileManager.default.createFile(atPath: tempURL.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: tempURL)
+
+        var bytesReceived: Int64 = 0
+        let chunkSize = 1_024 * 1_024 // 1 MB chunks
+        var buffer = Data()
+        buffer.reserveCapacity(chunkSize)
+        var lastProgressUpdate = CFAbsoluteTimeGetCurrent()
+
+        for try await byte in asyncBytes {
+            try Task.checkCancellation()
+            buffer.append(byte)
+            bytesReceived += 1
+
+            if buffer.count >= chunkSize {
+                handle.write(buffer)
+                buffer.removeAll(keepingCapacity: true)
+
+                // Update progress at most every 0.15s
+                let now = CFAbsoluteTimeGetCurrent()
+                if expectedLength > 0, now - lastProgressUpdate >= 0.15 {
+                    lastProgressUpdate = now
+                    let progress = min(Double(bytesReceived) / Double(expectedLength), 1.0)
+                    await MainActor.run {
+                        status = .downloading(fileIndex: fileIndex, fileCount: fileCount, fileProgress: progress)
+                    }
+                }
+            }
+        }
+
+        if !buffer.isEmpty {
+            handle.write(buffer)
+        }
+        handle.closeFile()
 
         // Atomic move into place.
         try? FileManager.default.removeItem(at: localURL)
@@ -182,72 +189,6 @@ final class MoonshineModelDownloader: ObservableObject {
             switch self {
             case .httpError(let code):
                 return "Server returned HTTP \(code)"
-            }
-        }
-    }
-}
-
-/// Delegate that tracks download progress and completion via a continuation.
-private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
-    private let lock = NSLock()
-    private var lastReportedTime: CFAbsoluteTime = 0
-    var completion: ((Result<URL, Error>) -> Void)?
-    var onProgress: (@Sendable (Double) -> Void)?
-
-    func urlSession(
-        _ session: URLSession,
-        downloadTask: URLSessionDownloadTask,
-        didWriteData bytesWritten: Int64,
-        totalBytesWritten: Int64,
-        totalBytesExpectedToWrite: Int64
-    ) {
-        guard totalBytesExpectedToWrite > 0 else { return }
-
-        let now = CFAbsoluteTimeGetCurrent()
-        lock.lock()
-        let shouldReport = now - lastReportedTime >= 0.1
-        if shouldReport { lastReportedTime = now }
-        lock.unlock()
-
-        if shouldReport {
-            let progress = min(Double(totalBytesWritten) / Double(totalBytesExpectedToWrite), 1.0)
-            onProgress?(progress)
-        }
-    }
-
-    func urlSession(
-        _ session: URLSession,
-        downloadTask: URLSessionDownloadTask,
-        didFinishDownloadingTo location: URL
-    ) {
-        // Copy the file before URLSession deletes it
-        let safeCopy = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString + ".download")
-        do {
-            try FileManager.default.copyItem(at: location, to: safeCopy)
-
-            if let httpResponse = downloadTask.response as? HTTPURLResponse, httpResponse.statusCode != 200 {
-                try? FileManager.default.removeItem(at: safeCopy)
-                completion?(.failure(DownloadError.httpError(httpResponse.statusCode)))
-            } else {
-                completion?(.success(safeCopy))
-            }
-        } catch {
-            completion?(.failure(error))
-        }
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let error {
-            completion?(.failure(error))
-        }
-    }
-
-    private enum DownloadError: LocalizedError {
-        case httpError(Int)
-        var errorDescription: String? {
-            switch self {
-            case .httpError(let code): return "Server returned HTTP \(code)"
             }
         }
     }
