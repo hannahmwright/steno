@@ -7,6 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-03-11
+
+### Fixed
+- Preserved unsaved settings drafts when switching between tabs.
+- Preserved in-progress settings edits when collapsing and reopening settings groups.
+- Updated "Last transcript" actions to operate on the current transcript text immediately after dictation finishes.
+- Scoped transparent window styling to the main Voce window instead of affecting every app window.
+- Improved UI readability with denser adaptive backgrounds and overlay surfaces so content stays legible over dark desktops.
+
 ## [0.4.5] - 2026-03-11
 
 ### Fixed

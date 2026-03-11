@@ -24,8 +24,8 @@ targets:
         CODE_SIGN_IDENTITY: Apple Development
         CODE_SIGN_ENTITLEMENTS: Voce/Voce.entitlements
         SWIFT_VERSION: 6.0
-        MARKETING_VERSION: 0.4.5
-        CURRENT_PROJECT_VERSION: 8
+        MARKETING_VERSION: 0.4.6
+        CURRENT_PROJECT_VERSION: 9
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_NSMicrophoneUsageDescription: Voce needs microphone access for dictation.
         INFOPLIST_KEY_SUFeedURL: https://raw.githubusercontent.com/hannahmwright/voce/main/appcast.xml
