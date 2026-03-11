@@ -19,7 +19,6 @@ final class MoonshineStreamingSession: @unchecked Sendable {
 
     // Accessed only on processingQueue.
     private let processingQueue = DispatchQueue(label: "voce.moonshine-stream", qos: .userInitiated)
-    private var transcriber: Transcriber?
     private var stream: MoonshineVoice.Stream?
     private var latestTranscript: Transcript = .init()
     private var latestStreamError: Error?
@@ -39,17 +38,13 @@ final class MoonshineStreamingSession: @unchecked Sendable {
         try ensureMicrophonePermission()
 
         try processingQueue.sync {
-            let transcriber = try Transcriber(
-                modelPath: config.modelDirectoryPath,
-                modelArch: config.modelArch.moonshineArch
-            )
+            let transcriber = try MoonshineTranscriberCache.shared.transcriber(for: config)
             let stream = try transcriber.createStream(updateInterval: 0.3)
             stream.addListener { [weak self] event in
                 self?.handle(event: event)
             }
             try stream.start()
 
-            self.transcriber = transcriber
             self.stream = stream
             self.latestTranscript = .init()
             self.latestStreamError = nil
@@ -60,9 +55,12 @@ final class MoonshineStreamingSession: @unchecked Sendable {
         let inputNode = engine.inputNode
         let inputFormat = inputNode.inputFormat(forBus: 0)
 
+        // Let Moonshine handle resampling internally. The probe showed our
+        // app-side 24 kHz -> 16 kHz conversion path crushes AirPods input
+        // amplitude, while the raw float samples are healthy.
         guard let targetFormat = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
-            sampleRate: 16_000,
+            sampleRate: inputFormat.sampleRate,
             channels: 1,
             interleaved: false
         ) else {
@@ -89,7 +87,10 @@ final class MoonshineStreamingSession: @unchecked Sendable {
                 guard let self, !self.isStopped else { return }
 
                 do {
-                    try self.stream?.addAudio(converted.samples, sampleRate: Int32(converted.sampleRate))
+                    try self.stream?.addAudio(
+                        converted.samples,
+                        sampleRate: Int32(converted.sampleRate.rounded())
+                    )
                 } catch {
                     self.latestStreamError = error
                 }
@@ -102,9 +103,7 @@ final class MoonshineStreamingSession: @unchecked Sendable {
             inputNode.removeTap(onBus: 0)
             processingQueue.sync {
                 stream?.close()
-                transcriber?.close()
                 stream = nil
-                self.transcriber = nil
                 latestTranscript = .init()
                 latestStreamError = nil
                 isStopped = true
@@ -123,9 +122,7 @@ final class MoonshineStreamingSession: @unchecked Sendable {
         return try processingQueue.sync {
             defer {
                 stream?.close()
-                transcriber?.close()
                 stream = nil
-                transcriber = nil
                 latestTranscript = .init()
                 latestStreamError = nil
                 isStopped = true
@@ -157,9 +154,7 @@ final class MoonshineStreamingSession: @unchecked Sendable {
         processingQueue.sync {
             isStopped = true
             stream?.close()
-            transcriber?.close()
             stream = nil
-            transcriber = nil
             latestTranscript = .init()
             latestStreamError = nil
         }

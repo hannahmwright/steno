@@ -3,6 +3,27 @@
   <channel>
     <title>Voce</title>
     <item>
+      <title>Version 0.4.5</title>
+      <sparkle:version>8</sparkle:version>
+      <sparkle:shortVersionString>0.4.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+        <h2>Voce 0.4.5</h2>
+        <ul>
+          <li>Fixed live Moonshine dictation for Bluetooth microphones by preserving each microphone's native sample rate instead of resampling in-app before streaming</li>
+          <li>Preloaded and reused the active Moonshine transcriber so repeat recordings start faster</li>
+          <li>Updated the app icon artwork and improved the dictation overlay's input anchoring heuristics</li>
+        </ul>
+      ]]></description>
+      <pubDate>Wed, 11 Mar 2026 20:46:26 +0000</pubDate>
+      <enclosure
+        url="https://github.com/hannahmwright/voce/releases/download/v0.4.5/Voce-0.4.5.dmg"
+        type="application/octet-stream"
+        sparkle:edSignature="kQdzNKGWRygkoNuNXEfIZ/tE7+JAIIM16a7mW+I8neZJh06mPrnnjfT3MdsaHRFImKPRa4oe3VWYolMuMtJdDg=="
+        length="37488136"
+      />
+    </item>
+    <item>
       <title>Version 0.4.3</title>
       <sparkle:version>6</sparkle:version>
       <sparkle:shortVersionString>0.4.3</sparkle:shortVersionString>

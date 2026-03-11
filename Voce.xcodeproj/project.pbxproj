@@ -20,6 +20,7 @@
 		411A42D08C3CBEB12F8DB3E3 /* MicButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 340E874BDA6F985AB31A34BB /* MicButton.swift */; };
 		4EAA23EDB4F2808191DE1B16 /* EngineSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C2A713C2627E7814CCA4C0D /* EngineSettingsSection.swift */; };
 		5BAA839E86E7873F77D7DD4E /* VoceKit in Frameworks */ = {isa = PBXBuildFile; productRef = 2BEFC4EBAAE42E87937FEF83 /* VoceKit */; };
+		63188EF10795408402810CB9 /* MoonshineTranscriberCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAB53275DBAD31AF37E0C725 /* MoonshineTranscriberCache.swift */; };
 		64771F7D834837E53B18AD89 /* SnippetsSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F8267E63FADBC256B9A7BA6 /* SnippetsSettingsSection.swift */; };
 		683E0BB776A90FA77D0CBEFD /* MoonshineModelConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AE17EB98B76F88C7D3CCCB2 /* MoonshineModelConfiguration.swift */; };
 		68E4DA75E33631C0BD2C328D /* GeneralSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D587D107389F4EA940AA188 /* GeneralSettingsSection.swift */; };
@@ -84,6 +85,7 @@
 		F2B4DE3A356EC84CCAD565C8 /* InsertionSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsertionSettingsSection.swift; sourceTree = "<group>"; };
 		F4341CE23927C00B47232FAD /* VoceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoceApp.swift; sourceTree = "<group>"; };
 		F778826155A1B6A51FAEB312 /* LexiconSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexiconSettingsSection.swift; sourceTree = "<group>"; };
+		FAB53275DBAD31AF37E0C725 /* MoonshineTranscriberCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoonshineTranscriberCache.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -132,6 +134,7 @@
 				5AE17EB98B76F88C7D3CCCB2 /* MoonshineModelConfiguration.swift */,
 				A351EBC4B478F9EB6A13E90B /* MoonshineModelDownloader.swift */,
 				DE543C6F9EE1B2BC61D183FC /* MoonshineStreamingSession.swift */,
+				FAB53275DBAD31AF37E0C725 /* MoonshineTranscriberCache.swift */,
 				6FE01DF2DAE5AABF41E3371F /* MoonshineTranscriptionEngine.swift */,
 				A3E2FC96193616902F7C0568 /* OnboardingView.swift */,
 				DBD0D5DE8C1F3673184AFB74 /* PermissionDiagnostics.swift */,
@@ -266,6 +269,7 @@
 				683E0BB776A90FA77D0CBEFD /* MoonshineModelConfiguration.swift in Sources */,
 				C46D2ED3B84326650F809B0F /* MoonshineModelDownloader.swift in Sources */,
 				22D52F59327D4524789A7000 /* MoonshineStreamingSession.swift in Sources */,
+				63188EF10795408402810CB9 /* MoonshineTranscriberCache.swift in Sources */,
 				B91EBC411B08FC20661ECC46 /* MoonshineTranscriptionEngine.swift in Sources */,
 				BED22121BD085200A09F90AF /* OnboardingView.swift in Sources */,
 				04B1A91240C329A601315488 /* PermissionDiagnostics.swift in Sources */,
@@ -293,7 +297,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Voce needs microphone access for dictation.";
@@ -303,7 +307,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.4.3;
+				MARKETING_VERSION = 0.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = io.voceapp.voce;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;
@@ -374,7 +378,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Voce needs microphone access for dictation.";
 				INFOPLIST_KEY_SUFeedURL = "https://raw.githubusercontent.com/hannahmwright/voce/main/appcast.xml";
@@ -383,7 +387,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.4.3;
+				MARKETING_VERSION = 0.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = io.voceapp.voce;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 6.0;

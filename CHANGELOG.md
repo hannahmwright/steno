@@ -7,6 +7,20 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-03-11
+
+### Fixed
+- Removed the temporary file-transcription fallback from live dictation after validating the native-sample-rate Moonshine microphone path with Bluetooth AirPods input.
+- Live Moonshine streaming now preserves the microphone's native sample rate instead of forcing app-side resampling, which restores healthy input amplitude for devices like AirPods that capture at 24 kHz.
+- Preloaded and reused the active Moonshine transcriber so repeat recordings start faster once the model is warm.
+- Refreshed the macOS app icon artwork.
+- Improved the dictation overlay's anchoring heuristics by capturing the focused field before recording starts and using text-marker based caret bounds when apps expose them.
+
+## [0.4.4] - 2026-03-11
+
+### Fixed
+- Dictation now keeps a file recording running alongside live Moonshine streaming and falls back to file-based transcription automatically when live capture returns no speech.
+
 ## [0.4.3] - 2026-03-11
 
 ### Fixed

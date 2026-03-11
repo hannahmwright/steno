@@ -1,9 +1,21 @@
 #if os(macOS)
 import AppKit
+import ApplicationServices
 import QuartzCore
 
 @MainActor
 public final class MacOverlayPresenter: NSObject, OverlayPresenter {
+    private static let axSelectedTextMarkerRangeAttribute = "AXSelectedTextMarkerRange"
+    private static let axBoundsForTextMarkerRangeParameterizedAttribute = "AXBoundsForTextMarkerRange"
+
+    public struct AnchorSnapshot: Sendable, Equatable {
+        public let frame: CGRect
+
+        public init(frame: CGRect) {
+            self.frame = frame
+        }
+    }
+
     private var window: NSWindow?
     private var statusDot: NSView?
     private var textField: NSTextField?
@@ -13,6 +25,7 @@ public final class MacOverlayPresenter: NSObject, OverlayPresenter {
     private var pulseTimer: Timer?
     private var dotPulseHigh = true
     private var wasHidden = true
+    private var anchorSnapshot: AnchorSnapshot?
 
     private static let dotBlue = NSColor(red: 0.118, green: 0.565, blue: 1.0, alpha: 1.0)
 
@@ -43,6 +56,19 @@ public final class MacOverlayPresenter: NSObject, OverlayPresenter {
     /// Pre-create the overlay window so the first `show` has no lazy-init stutter.
     public func prepareWindow() {
         ensureWindow()
+    }
+
+    public func captureAnchorSnapshot() -> AnchorSnapshot? {
+        guard AXIsProcessTrusted(),
+              let frame = currentFocusedFrame() else {
+            return nil
+        }
+
+        return AnchorSnapshot(frame: frame)
+    }
+
+    public func setAnchorSnapshot(_ snapshot: AnchorSnapshot?) {
+        anchorSnapshot = snapshot
     }
 
     public func show(state: OverlayState) {
@@ -92,7 +118,7 @@ public final class MacOverlayPresenter: NSObject, OverlayPresenter {
             animateDotColor(.systemRed)
         }
 
-        centerWindowNearTop()
+        positionWindow()
 
         if isFirstShow && !reduceMotion {
             // Entrance animation: fade in + slide up
@@ -116,6 +142,7 @@ public final class MacOverlayPresenter: NSObject, OverlayPresenter {
         stopTimer()
         stopDotPulse()
         wasHidden = true
+        anchorSnapshot = nil
 
         if !reduceMotion {
             NSAnimationContext.runAnimationGroup({ context in
@@ -270,6 +297,233 @@ public final class MacOverlayPresenter: NSObject, OverlayPresenter {
         let seconds = elapsed % 60
         let mode = listeningHandsFree ? "Hands-Free" : "Hold-to-Talk"
         textField?.stringValue = "\(mode) \(String(format: "%02d:%02d", minutes, seconds))"
+    }
+
+    private func positionWindow() {
+        guard let window else { return }
+
+        if let anchoredOrigin = anchoredWindowOrigin(for: window) {
+            window.setFrameOrigin(anchoredOrigin)
+            return
+        }
+
+        centerWindowNearTop()
+    }
+
+    private func anchoredWindowOrigin(for window: NSWindow) -> NSPoint? {
+        if let anchorSnapshot {
+            return anchoredWindowOrigin(for: window, frame: anchorSnapshot.frame)
+        }
+
+        guard AXIsProcessTrusted(),
+              let frame = currentFocusedFrame() else {
+            return nil
+        }
+
+        return anchoredWindowOrigin(for: window, frame: frame)
+    }
+
+    private func anchoredWindowOrigin(for window: NSWindow, frame: CGRect) -> NSPoint? {
+        let anchorPoint = NSPoint(x: frame.midX, y: frame.maxY)
+        guard let screen = screen(containing: anchorPoint) else {
+            return nil
+        }
+
+        let visibleFrame = screen.visibleFrame
+        let margin: CGFloat = 12
+        var x = anchorPoint.x - (window.frame.width / 2)
+        var y = frame.maxY + margin
+
+        x = min(max(x, visibleFrame.minX + margin), visibleFrame.maxX - window.frame.width - margin)
+        y = min(y, visibleFrame.maxY - window.frame.height - margin)
+
+        if y < visibleFrame.minY + margin {
+            return nil
+        }
+
+        return NSPoint(x: x, y: y)
+    }
+
+    private func currentFocusedFrame() -> NSRect? {
+        guard let element = focusedElement() else {
+            return focusedWindowFrame()
+        }
+
+        if let markerBounds = selectedTextMarkerBounds(for: element) {
+            return markerBounds
+        }
+
+        if let caretBounds = selectedTextBounds(for: element) {
+            return caretBounds
+        }
+
+        if let elementFrame = elementFrame(for: element) {
+            return elementFrame
+        }
+
+        return focusedWindowFrame()
+    }
+
+    private func focusedElement() -> AXUIElement? {
+        let systemWide = AXUIElementCreateSystemWide()
+        var focusedRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            systemWide,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedRef
+        ) == .success,
+        let focusedRef,
+        CFGetTypeID(focusedRef) == AXUIElementGetTypeID() else {
+            return nil
+        }
+
+        return unsafeDowncast(focusedRef as AnyObject, to: AXUIElement.self)
+    }
+
+    private func selectedTextMarkerBounds(for element: AXUIElement) -> NSRect? {
+        var selectedMarkerRangeRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            Self.axSelectedTextMarkerRangeAttribute as CFString,
+            &selectedMarkerRangeRef
+        ) == .success,
+        let selectedMarkerRangeRef else {
+            return nil
+        }
+
+        var boundsRef: CFTypeRef?
+        guard AXUIElementCopyParameterizedAttributeValue(
+            element,
+            Self.axBoundsForTextMarkerRangeParameterizedAttribute as CFString,
+            selectedMarkerRangeRef,
+            &boundsRef
+        ) == .success,
+        let boundsRef,
+        CFGetTypeID(boundsRef) == AXValueGetTypeID() else {
+            return nil
+        }
+
+        let boundsValue = unsafeDowncast(boundsRef as AnyObject, to: AXValue.self)
+        guard AXValueGetType(boundsValue) == .cgRect else {
+            return nil
+        }
+
+        var rect = CGRect.zero
+        guard AXValueGetValue(boundsValue, .cgRect, &rect),
+              !rect.isNull,
+              !rect.isInfinite,
+              rect.width >= 0,
+              rect.height >= 0 else {
+            return nil
+        }
+
+        return rect
+    }
+
+    private func selectedTextBounds(for element: AXUIElement) -> NSRect? {
+        var selectedRangeRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            kAXSelectedTextRangeAttribute as CFString,
+            &selectedRangeRef
+        ) == .success,
+        let selectedRangeRef,
+        CFGetTypeID(selectedRangeRef) == AXValueGetTypeID() else {
+            return nil
+        }
+
+        let selectedRangeValue = unsafeDowncast(selectedRangeRef as AnyObject, to: AXValue.self)
+        guard AXValueGetType(selectedRangeValue) == .cfRange else {
+            return nil
+        }
+
+        var boundsRef: CFTypeRef?
+        guard AXUIElementCopyParameterizedAttributeValue(
+            element,
+            kAXBoundsForRangeParameterizedAttribute as CFString,
+            selectedRangeValue,
+            &boundsRef
+        ) == .success,
+        let boundsRef,
+        CFGetTypeID(boundsRef) == AXValueGetTypeID() else {
+            return nil
+        }
+
+        let boundsValue = unsafeDowncast(boundsRef as AnyObject, to: AXValue.self)
+        guard AXValueGetType(boundsValue) == .cgRect else {
+            return nil
+        }
+
+        var rect = CGRect.zero
+        guard AXValueGetValue(boundsValue, .cgRect, &rect),
+              !rect.isNull,
+              !rect.isInfinite,
+              rect.width >= 0,
+              rect.height >= 0 else {
+            return nil
+        }
+
+        return rect
+    }
+
+    private func elementFrame(for element: AXUIElement) -> NSRect? {
+        var positionRef: CFTypeRef?
+        var sizeRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionRef) == .success,
+              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeRef) == .success,
+              let positionValue = positionRef,
+              let sizeValue = sizeRef,
+              CFGetTypeID(positionValue) == AXValueGetTypeID(),
+              CFGetTypeID(sizeValue) == AXValueGetTypeID() else {
+            return nil
+        }
+
+        let positionAXValue = unsafeDowncast(positionValue as AnyObject, to: AXValue.self)
+        let sizeAXValue = unsafeDowncast(sizeValue as AnyObject, to: AXValue.self)
+
+        var point = CGPoint.zero
+        var size = CGSize.zero
+        guard AXValueGetType(positionAXValue) == .cgPoint,
+              AXValueGetType(sizeAXValue) == .cgSize,
+              AXValueGetValue(positionAXValue, .cgPoint, &point),
+              AXValueGetValue(sizeAXValue, .cgSize, &size) else {
+            return nil
+        }
+
+        return NSRect(origin: point, size: size)
+    }
+
+    private func focusedWindowFrame() -> NSRect? {
+        let systemWide = AXUIElementCreateSystemWide()
+        var appRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            systemWide,
+            kAXFocusedApplicationAttribute as CFString,
+            &appRef
+        ) == .success,
+        let appRef,
+        CFGetTypeID(appRef) == AXUIElementGetTypeID() else {
+            return nil
+        }
+
+        let appElement = unsafeDowncast(appRef as AnyObject, to: AXUIElement.self)
+        var windowRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            appElement,
+            kAXFocusedWindowAttribute as CFString,
+            &windowRef
+        ) == .success,
+        let windowRef,
+        CFGetTypeID(windowRef) == AXUIElementGetTypeID() else {
+            return nil
+        }
+
+        let windowElement = unsafeDowncast(windowRef as AnyObject, to: AXUIElement.self)
+        return elementFrame(for: windowElement)
+    }
+
+    private func screen(containing point: NSPoint) -> NSScreen? {
+        NSScreen.screens.first { NSMouseInRect(point, $0.frame, false) }
     }
 
     private func centerWindowNearTop() {

@@ -100,6 +100,7 @@ public actor SessionCoordinator {
         guard let active = activeSessions.removeValue(forKey: sessionID) else {
             throw SessionCoordinatorError.sessionNotFound
         }
+
         return try await finaliseTranscript(rawTranscript, active: active)
     }
 

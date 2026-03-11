@@ -133,6 +133,7 @@ final class DictationController: ObservableObject {
         }
         recordingTimer?.invalidate()
         recordingTimer = nil
+        MoonshineTranscriberCache.shared.invalidate()
 
         // Persist learning data before exit.
         Task { await learningEngine.save() }
@@ -409,6 +410,7 @@ final class DictationController: ObservableObject {
         status = "Checking microphone..."
         lastError = ""
         let capturedContext = AppContextProvider.current()
+        let overlayAnchorSnapshot = overlay.captureAnchorSnapshot()
 
         let shouldPauseMedia = (mode == .handsFree && preferences.media.pauseDuringHandsFree)
                             || (mode == .pressToTalk && preferences.media.pauseDuringPressToTalk)
@@ -428,13 +430,13 @@ final class DictationController: ObservableObject {
                         self?.recordingElapsed += 1
                     }
                 }
+                overlay.setAnchorSnapshot(overlayAnchorSnapshot)
                 overlay.show(state: .listening(handsFree: mode == .handsFree, elapsedSeconds: 0))
 
                 if shouldPauseMedia {
                     activeMediaToken = await mediaInterruption.beginInterruption()
                 }
 
-                // Register session for streaming (no file-based capture needed).
                 let sessionID = await coordinator.registerStreamingSession(appContext: capturedContext)
                 await coordinator.setHandsFreeEnabled(mode == .handsFree)
                 currentSessionID = sessionID
@@ -518,7 +520,6 @@ final class DictationController: ObservableObject {
             overlay.show(state: .transcribing)
 
             do {
-                // Stop the streaming session to get the final transcript.
                 let rawTranscript = try streamingSession?.stop() ?? RawTranscript(text: "")
                 let result = try await coordinator.processStreamingTranscript(
                     rawTranscript,
@@ -625,6 +626,13 @@ final class DictationController: ObservableObject {
             fallbackCleanupEngine: RuleBasedCleanupEngine(),
             learningEngine: learningEngine
         )
+
+        let streamingConfig = MoonshineStreamingSession.Configuration(
+            modelDirectoryPath: snapshot.dictation.modelDirectoryPath,
+            modelArch: snapshot.dictation.modelArch
+        )
+        MoonshineTranscriberCache.shared.invalidate()
+        MoonshineTranscriberCache.shared.warm(config: streamingConfig)
 
         do {
             try launchAtLoginService.setEnabled(snapshot.general.launchAtLoginEnabled)
