@@ -22,6 +22,7 @@ struct SettingsView: View {
                 LexiconSettingsSection(preferences: $preferencesDraft)
                 CleanupStyleSettingsSection(preferences: $preferencesDraft)
                 SnippetsSettingsSection(preferences: $preferencesDraft)
+                VoiceCommandsSettingsSection(preferences: $preferencesDraft)
                 GeneralSettingsSection(
                     preferences: $preferencesDraft,
                     launchAtLoginWarning: controller.launchAtLoginWarning

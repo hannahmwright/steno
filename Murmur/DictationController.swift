@@ -32,6 +32,7 @@ final class DictationController: ObservableObject {
     private var lexiconService: PersonalLexiconService
     private var styleProfileService: StyleProfileService
     private var snippetService: SnippetService
+    private var voiceCommandService: VoiceCommandService
     private var coordinator: SessionCoordinator?
 
     private var recordingStateMachine = RecordingStateMachine()
@@ -64,6 +65,7 @@ final class DictationController: ObservableObject {
             appProfiles: AppPreferences.default.appStyleProfiles
         )
         self.snippetService = SnippetService(snippets: AppPreferences.default.snippets)
+        self.voiceCommandService = VoiceCommandService(commands: AppPreferences.default.voiceCommands)
 
         hotkey.onPressToTalkStart = { [weak self] in
             self?.pressToTalkStart()
@@ -525,6 +527,7 @@ final class DictationController: ObservableObject {
         lexiconService = runtimeFactory.makeLexiconService()
         styleProfileService = runtimeFactory.makeStyleProfileService()
         snippetService = runtimeFactory.makeSnippetService()
+        voiceCommandService = runtimeFactory.makeVoiceCommandService()
 
         let transcription = runtimeFactory.makeTranscriptionEngine()
         let cleanupEngine: any CleanupEngine = runtimeFactory.makeCleanupEngine()
@@ -539,6 +542,7 @@ final class DictationController: ObservableObject {
             lexiconService: lexiconService,
             styleProfileService: styleProfileService,
             snippetService: snippetService,
+            voiceCommandService: voiceCommandService,
             fallbackCleanupEngine: RuleBasedCleanupEngine()
         )
 
@@ -601,6 +605,10 @@ private struct DictationRuntimeFactory {
 
     func makeSnippetService() -> SnippetService {
         SnippetService(snippets: snapshot.snippets)
+    }
+
+    func makeVoiceCommandService() -> VoiceCommandService {
+        VoiceCommandService(commands: snapshot.voiceCommands)
     }
 
     func makeTranscriptionEngine() -> MoonshineTranscriptionEngine {

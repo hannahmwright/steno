@@ -20,9 +20,12 @@
 		4F14AEC41A87ED2E2CDCBC3D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FBF74434C602C47E5BAA6CED /* Assets.xcassets */; };
 		5C98414E6167A3E1644D9675 /* MediaSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF2DF3F8469ADD232637074D /* MediaSettingsSection.swift */; };
 		666CED5D1B1BDC82D890868D /* InsertionSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E9DDB03CD07D68D28BB84FA /* InsertionSettingsSection.swift */; };
+		68CD4D751C1034533737645F /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = DECF0E8FB2D2058742D4EF03 /* Sparkle */; };
 		6DA49FB9CCA842FA4B2688C0 /* MurmurApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED35761EBF7EF881FA0E7BB9 /* MurmurApp.swift */; };
 		7933EFA84D87FF272CD828FF /* RecordingSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BF6309BCDF40A43F0B6F346 /* RecordingSettingsSection.swift */; };
+		7C27217D1228AE789688096E /* VoiceCommandsSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA8E4D62F2C6001EA2B1F2B0 /* VoiceCommandsSettingsSection.swift */; };
 		81052E34ADEB26905192E8E8 /* EngineSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B0463C56380A87A3E1E1E3 /* EngineSettingsSection.swift */; };
+		83367AC4DC48D46EAE2D66C7 /* UpdaterController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3B6A1D579649A1400FBF21C /* UpdaterController.swift */; };
 		92E4016D915EA080EA0823A4 /* Moonshine in Frameworks */ = {isa = PBXBuildFile; productRef = 984D0655095F89905E6C1958 /* Moonshine */; };
 		934DF3B64D737016D90FE8F1 /* MoonshineModelDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1DD1C5DC5A3FC0F57117A2F /* MoonshineModelDownloader.swift */; };
 		9DE98C401B8D23CB83F68936 /* PermissionStatusCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26A7AF1055CC2A35325E2AF1 /* PermissionStatusCard.swift */; };
@@ -65,6 +68,7 @@
 		90B0463C56380A87A3E1E1E3 /* EngineSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineSettingsSection.swift; sourceTree = "<group>"; };
 		99486AEF2732F6BD0B3E78A2 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		9F6709976D17515D5A759678 /* LaunchAtLoginService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginService.swift; sourceTree = "<group>"; };
+		B3B6A1D579649A1400FBF21C /* UpdaterController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdaterController.swift; sourceTree = "<group>"; };
 		BAE33980099CD1A9A7BA12CA /* PermissionDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionDiagnostics.swift; sourceTree = "<group>"; };
 		C21A0CDFB2E505B479A32C68 /* HistoryTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryTab.swift; sourceTree = "<group>"; };
 		C834EC374C4A986C47F46292 /* Murmur.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Murmur.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -72,6 +76,7 @@
 		D27A12BC8571A95EEB82D9BA /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		E49B8BFD4899D49213E66351 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		E83CDEC66946DDEA4016486C /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
+		EA8E4D62F2C6001EA2B1F2B0 /* VoiceCommandsSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCommandsSettingsSection.swift; sourceTree = "<group>"; };
 		ED35761EBF7EF881FA0E7BB9 /* MurmurApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MurmurApp.swift; sourceTree = "<group>"; };
 		EF2DF3F8469ADD232637074D /* MediaSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaSettingsSection.swift; sourceTree = "<group>"; };
 		F5E3CFF58F84067504E28FEE /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
@@ -86,6 +91,7 @@
 			files = (
 				CCA6160297EC5A1677B8106D /* MurmurKit in Frameworks */,
 				92E4016D915EA080EA0823A4 /* Moonshine in Frameworks */,
+				68CD4D751C1034533737645F /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -152,6 +158,8 @@
 				99486AEF2732F6BD0B3E78A2 /* SettingsView.swift */,
 				7C25C864434435186E8C299D /* SettingsViewHelpers.swift */,
 				840AEE16DB41D6BB90B39A4F /* SnippetsSettingsSection.swift */,
+				B3B6A1D579649A1400FBF21C /* UpdaterController.swift */,
+				EA8E4D62F2C6001EA2B1F2B0 /* VoiceCommandsSettingsSection.swift */,
 			);
 			path = Murmur;
 			sourceTree = "<group>";
@@ -175,6 +183,7 @@
 			packageProductDependencies = (
 				7E5A870AA24834D2C5AF68DA /* MurmurKit */,
 				984D0655095F89905E6C1958 /* Moonshine */,
+				DECF0E8FB2D2058742D4EF03 /* Sparkle */,
 			);
 			productName = Murmur;
 			productReference = C834EC374C4A986C47F46292 /* Murmur.app */;
@@ -206,6 +215,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				3386F212FA9A5A0F512FD716 /* XCRemoteSwiftPackageReference "moonshine-swift" */,
+				B9DF1A0CA1E6D30B0F736CA4 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				34DDD21ED7A130C4B690BBB8 /* XCLocalSwiftPackageReference "MurmurKit" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -263,6 +273,8 @@
 				BC39EA47F353B7C2BB07F603 /* SettingsView.swift in Sources */,
 				FBC13F384FE3B21264C7E63A /* SettingsViewHelpers.swift in Sources */,
 				B9C1CC0845A48FBA9EDE519D /* SnippetsSettingsSection.swift in Sources */,
+				83367AC4DC48D46EAE2D66C7 /* UpdaterController.swift in Sources */,
+				7C27217D1228AE789688096E /* VoiceCommandsSettingsSection.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -279,6 +291,8 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Murmur needs microphone access for dictation.";
+				INFOPLIST_KEY_SUFeedURL = "https://raw.githubusercontent.com/hannahmwright/murmur/main/appcast.xml";
+				INFOPLIST_KEY_SUPublicEDKey = "K4AyNtpNz8GmLk6dsAWKGHBqs3bpSLUnrInDL6pJN4c=";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -300,6 +314,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Murmur needs microphone access for dictation.";
+				INFOPLIST_KEY_SUFeedURL = "https://raw.githubusercontent.com/hannahmwright/murmur/main/appcast.xml";
+				INFOPLIST_KEY_SUPublicEDKey = "K4AyNtpNz8GmLk6dsAWKGHBqs3bpSLUnrInDL6pJN4c=";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -468,6 +484,14 @@
 				minimumVersion = 0.0.49;
 			};
 		};
+		B9DF1A0CA1E6D30B0F736CA4 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.4;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -479,6 +503,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3386F212FA9A5A0F512FD716 /* XCRemoteSwiftPackageReference "moonshine-swift" */;
 			productName = Moonshine;
+		};
+		DECF0E8FB2D2058742D4EF03 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B9DF1A0CA1E6D30B0F736CA4 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

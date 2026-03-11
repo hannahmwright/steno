@@ -129,6 +129,7 @@ struct AppPreferences: Codable, Sendable, Equatable {
     var globalStyleProfile: StyleProfile
     var appStyleProfiles: [String: StyleProfile]
     var snippets: [Snippet]
+    var voiceCommands: [VoiceCommand]
 
     static var `default`: AppPreferences {
         return AppPreferences(
@@ -159,7 +160,8 @@ struct AppPreferences: Codable, Sendable, Equatable {
                 commandPolicy: .transform
             ),
             appStyleProfiles: [:],
-            snippets: []
+            snippets: [],
+            voiceCommands: VoiceCommand.builtIns
         )
     }
 

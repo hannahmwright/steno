@@ -31,6 +31,7 @@ public actor SessionCoordinator {
     private let lexiconService: PersonalLexiconService
     private let styleProfileService: StyleProfileService
     private let snippetService: SnippetService
+    private let voiceCommandService: VoiceCommandService
 
     private var activeSessions: [SessionID: ActiveSession] = [:]
     private(set) var isHandsFreeEnabled: Bool = false
@@ -44,6 +45,7 @@ public actor SessionCoordinator {
         lexiconService: PersonalLexiconService,
         styleProfileService: StyleProfileService,
         snippetService: SnippetService = SnippetService(),
+        voiceCommandService: VoiceCommandService = VoiceCommandService(),
         fallbackCleanupEngine: CleanupEngine = RuleBasedCleanupEngine()
     ) {
         self.captureService = captureService
@@ -54,6 +56,7 @@ public actor SessionCoordinator {
         self.lexiconService = lexiconService
         self.styleProfileService = styleProfileService
         self.snippetService = snippetService
+        self.voiceCommandService = voiceCommandService
         self.fallbackCleanupEngine = fallbackCleanupEngine
     }
 
@@ -111,13 +114,16 @@ public actor SessionCoordinator {
             appContext: active.appContext
         )
 
-        var insertResult = await insertionService.insert(text: cleanupResult.transcript.text, target: active.appContext)
+        // Apply voice commands (punctuation, whitespace, "delete that", custom) after cleanup.
+        let finalText = voiceCommandService.apply(to: cleanupResult.transcript.text)
+
+        var insertResult = await insertionService.insert(text: finalText, target: active.appContext)
         insertResult.cleanupOutcome = cleanupResult.outcome
 
         let entry = TranscriptEntry(
             appBundleID: active.appContext.bundleIdentifier,
             rawText: rawTranscript.text,
-            cleanText: cleanupResult.transcript.text,
+            cleanText: finalText,
             audioURL: nil,
             insertionStatus: insertResult.status
         )
