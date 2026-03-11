@@ -1,7 +1,13 @@
 import Foundation
 
 public struct RuleBasedCleanupEngine: CleanupEngine, Sendable {
-    public init() {}
+    /// Word frequency data from the learning engine, used to bias candidate ranking
+    /// toward the user's familiar vocabulary.
+    public var wordFrequencies: [String: Int]
+
+    public init(wordFrequencies: [String: Int] = [:]) {
+        self.wordFrequencies = wordFrequencies
+    }
 
     public func cleanup(
         raw: RawTranscript,
@@ -14,7 +20,7 @@ public struct RuleBasedCleanupEngine: CleanupEngine, Sendable {
             profile: profile,
             lexicon: lexicon
         )
-        let ranker = LocalCleanupRanker()
+        let ranker = LocalCleanupRanker(wordFrequencies: wordFrequencies)
         let best = ranker.bestCandidate(
             rawText: raw.text,
             candidates: candidates,

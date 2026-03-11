@@ -34,6 +34,7 @@ final class DictationController: ObservableObject {
     private var snippetService: SnippetService
     private var voiceCommandService: VoiceCommandService
     private var coordinator: SessionCoordinator?
+    private let learningEngine = LearningEngine()
 
     private var recordingStateMachine = RecordingStateMachine()
     private var currentSessionID: SessionID?
@@ -121,6 +122,9 @@ final class DictationController: ObservableObject {
         }
         recordingTimer?.invalidate()
         recordingTimer = nil
+
+        // Persist learning data before exit.
+        Task { await learningEngine.save() }
     }
 
     var menuBarIconName: String {
@@ -284,6 +288,62 @@ final class DictationController: ObservableObject {
     func clearErrors() {
         lastError = ""
         hotkeyRegistrationMessage = ""
+    }
+
+    // MARK: - Learning Engine Actions
+
+    func submitCorrection(rawWord: String, correctedWord: String) async {
+        let promoted = await learningEngine.recordCorrection(
+            rawWord: rawWord,
+            correctedWord: correctedWord
+        )
+        if let entry = promoted {
+            // Auto-add to lexicon when correction threshold is reached.
+            if !preferences.lexiconEntries.contains(where: {
+                $0.term.lowercased() == entry.term.lowercased()
+            }) {
+                preferences.lexiconEntries.append(entry)
+                savePreferences()
+                status = "Learned: \"\(entry.term)\" \u{2192} \"\(entry.preferred)\" added to lexicon."
+            }
+        } else {
+            status = "Correction recorded."
+        }
+        await learningEngine.save()
+    }
+
+    func fetchSnippetSuggestions(excluding triggers: Set<String>) async -> [SnippetSuggestion] {
+        await learningEngine.snippetSuggestions(excluding: triggers)
+    }
+
+    func acceptSnippetSuggestion(_ suggestion: SnippetSuggestion) async {
+        let snippet = Snippet(
+            trigger: suggestion.phrase,
+            expansion: suggestion.phrase,
+            scope: .global
+        )
+        preferences.snippets.append(snippet)
+        savePreferences()
+        status = "Shortcut added for \"\(suggestion.phrase)\"."
+    }
+
+    func dismissSnippetSuggestion(_ suggestion: SnippetSuggestion) async {
+        await learningEngine.dismissSnippetSuggestion(phrase: suggestion.phrase)
+        await learningEngine.save()
+    }
+
+    func fetchStyleSuggestions() async -> [StyleSuggestion] {
+        await learningEngine.styleSuggestions(currentProfiles: preferences.appStyleProfiles)
+    }
+
+    func acceptStyleSuggestion(_ suggestion: StyleSuggestion) async {
+        preferences.appStyleProfiles[suggestion.bundleID] = suggestion.suggestedProfile
+        savePreferences()
+        status = "Style profile applied for \(suggestion.bundleID)."
+    }
+
+    func fetchCorrections() async -> [Correction] {
+        await learningEngine.corrections()
     }
 
     func pasteEntry(_ entry: TranscriptEntry) {
@@ -520,9 +580,13 @@ final class DictationController: ObservableObject {
         snapshot.normalize()
         applyPreferencesLocally(snapshot)
 
+        // Get learned word frequencies for vocabulary-biased candidate ranking.
+        let wordFreqs = await learningEngine.wordFrequencySnapshot()
+
         let runtimeFactory = DictationRuntimeFactory(
             snapshot: snapshot,
-            clipboardService: clipboardService
+            clipboardService: clipboardService,
+            wordFrequencies: wordFreqs
         )
         lexiconService = runtimeFactory.makeLexiconService()
         styleProfileService = runtimeFactory.makeStyleProfileService()
@@ -543,7 +607,8 @@ final class DictationController: ObservableObject {
             styleProfileService: styleProfileService,
             snippetService: snippetService,
             voiceCommandService: voiceCommandService,
-            fallbackCleanupEngine: RuleBasedCleanupEngine()
+            fallbackCleanupEngine: RuleBasedCleanupEngine(),
+            learningEngine: learningEngine
         )
 
         do {
@@ -591,6 +656,7 @@ final class DictationController: ObservableObject {
 private struct DictationRuntimeFactory {
     let snapshot: AppPreferences
     let clipboardService: any ClipboardService
+    let wordFrequencies: [String: Int]
 
     func makeLexiconService() -> PersonalLexiconService {
         PersonalLexiconService(entries: snapshot.lexiconEntries)
@@ -621,7 +687,7 @@ private struct DictationRuntimeFactory {
     }
 
     func makeCleanupEngine() -> any CleanupEngine {
-        RuleBasedCleanupEngine()
+        RuleBasedCleanupEngine(wordFrequencies: wordFrequencies)
     }
 
     func makeInsertionTransports() -> [any InsertionTransport] {

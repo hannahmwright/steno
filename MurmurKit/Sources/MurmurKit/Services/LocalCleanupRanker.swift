@@ -1,7 +1,13 @@
 import Foundation
 
 public struct LocalCleanupRanker: Sendable {
-    public init() {}
+    /// Optional word frequency map from the learning engine.
+    /// When provided, candidates using the user's common vocabulary score higher.
+    public var wordFrequencies: [String: Int]
+
+    public init(wordFrequencies: [String: Int] = [:]) {
+        self.wordFrequencies = wordFrequencies
+    }
 
     public func bestCandidate(
         rawText: String,
@@ -51,8 +57,10 @@ public struct LocalCleanupRanker: Sendable {
             candidateText: candidate.text,
             profile: profile
         )
+        let vocabBonus = vocabularyFamiliarityBonus(text: candidate.text)
 
-        let total = (semantic * 0.65) + (fluency * 0.25) - (editPenalty * 0.10) - (commandPenalty * 1.0)
+        let total = (semantic * 0.60) + (fluency * 0.20) + (vocabBonus * 0.10)
+            - (editPenalty * 0.10) - (commandPenalty * 1.0)
 
         return CleanupRankingScore(
             semanticPreservationScore: semantic,
@@ -164,6 +172,26 @@ public struct LocalCleanupRanker: Sendable {
         guard rawTrimmed.hasPrefix("/") else { return 0 }
         let candidateTrimmed = candidateText.trimmingCharacters(in: .whitespacesAndNewlines)
         return candidateTrimmed == rawTrimmed ? 0 : 1
+    }
+
+    /// Rewards candidates that use words the user has historically dictated.
+    /// Returns 0 when no word frequency data is available (graceful no-op).
+    private func vocabularyFamiliarityBonus(text: String) -> Double {
+        guard !wordFrequencies.isEmpty else { return 0 }
+
+        let words = tokenizeWords(normalize(text))
+        guard !words.isEmpty else { return 0 }
+
+        var totalFreq = 0.0
+        for word in words {
+            totalFreq += Double(wordFrequencies[word] ?? 0)
+        }
+
+        // Average frequency per word, log-scaled to prevent dominance by common words.
+        let avgFreq = totalFreq / Double(words.count)
+        // log1p(x) ensures: 0 freq → 0 bonus, 10 freq → 0.7, 100 freq → 0.87
+        let bonus = min(log1p(avgFreq) / log1p(100.0), 1.0)
+        return bonus
     }
 
     private func normalize(_ text: String) -> String {

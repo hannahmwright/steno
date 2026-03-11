@@ -32,6 +32,7 @@ public actor SessionCoordinator {
     private let styleProfileService: StyleProfileService
     private let snippetService: SnippetService
     private let voiceCommandService: VoiceCommandService
+    private let learningEngine: LearningEngine?
 
     private var activeSessions: [SessionID: ActiveSession] = [:]
     private(set) var isHandsFreeEnabled: Bool = false
@@ -46,7 +47,8 @@ public actor SessionCoordinator {
         styleProfileService: StyleProfileService,
         snippetService: SnippetService = SnippetService(),
         voiceCommandService: VoiceCommandService = VoiceCommandService(),
-        fallbackCleanupEngine: CleanupEngine = RuleBasedCleanupEngine()
+        fallbackCleanupEngine: CleanupEngine = RuleBasedCleanupEngine(),
+        learningEngine: LearningEngine? = nil
     ) {
         self.captureService = captureService
         self.transcriptionEngine = transcriptionEngine
@@ -58,6 +60,7 @@ public actor SessionCoordinator {
         self.snippetService = snippetService
         self.voiceCommandService = voiceCommandService
         self.fallbackCleanupEngine = fallbackCleanupEngine
+        self.learningEngine = learningEngine
     }
 
     @discardableResult
@@ -128,6 +131,17 @@ public actor SessionCoordinator {
             insertionStatus: insertResult.status
         )
         try await historyStore.append(entry: entry)
+
+        // Feed session data to the learning engine for adaptive improvement.
+        if let learningEngine {
+            await learningEngine.observeSession(
+                rawText: rawTranscript.text,
+                cleanText: finalText,
+                removedFillers: cleanupResult.transcript.removedFillers,
+                appBundleID: active.appContext.bundleIdentifier
+            )
+            await learningEngine.save()
+        }
 
         return insertResult
     }

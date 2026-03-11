@@ -29,6 +29,7 @@
 		92E4016D915EA080EA0823A4 /* Moonshine in Frameworks */ = {isa = PBXBuildFile; productRef = 984D0655095F89905E6C1958 /* Moonshine */; };
 		934DF3B64D737016D90FE8F1 /* MoonshineModelDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1DD1C5DC5A3FC0F57117A2F /* MoonshineModelDownloader.swift */; };
 		9DE98C401B8D23CB83F68936 /* PermissionStatusCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26A7AF1055CC2A35325E2AF1 /* PermissionStatusCard.swift */; };
+		A79862E484C44CE3B0C0CB04 /* LearningSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 794AE3C096C626FEA8920922 /* LearningSettingsSection.swift */; };
 		A8AA1229E3C64BAE6ADDBF42 /* MicButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77DF238976E9724806EB9944 /* MicButton.swift */; };
 		AE880C230D5A0FEF2FEED91F /* MoonshineModelConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AC1F113D50660867E4D6AC1 /* MoonshineModelConfiguration.swift */; };
 		B06B10DCB1CE55AC401F2664 /* LaunchAtLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F6709976D17515D5A759678 /* LaunchAtLoginService.swift */; };
@@ -60,6 +61,7 @@
 		705220A3846AC6270FEBBC24 /* Murmur.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Murmur.entitlements; sourceTree = "<group>"; };
 		76C673E1CF2425F674F77B93 /* DictationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationController.swift; sourceTree = "<group>"; };
 		77DF238976E9724806EB9944 /* MicButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicButton.swift; sourceTree = "<group>"; };
+		794AE3C096C626FEA8920922 /* LearningSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningSettingsSection.swift; sourceTree = "<group>"; };
 		7C25C864434435186E8C299D /* SettingsViewHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewHelpers.swift; sourceTree = "<group>"; };
 		817D56913A47A7C1B7F4E1AC /* RecordTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordTab.swift; sourceTree = "<group>"; };
 		840AEE16DB41D6BB90B39A4F /* SnippetsSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsSettingsSection.swift; sourceTree = "<group>"; };
@@ -139,6 +141,7 @@
 				D27A12BC8571A95EEB82D9BA /* HistoryView.swift */,
 				4E9DDB03CD07D68D28BB84FA /* InsertionSettingsSection.swift */,
 				9F6709976D17515D5A759678 /* LaunchAtLoginService.swift */,
+				794AE3C096C626FEA8920922 /* LearningSettingsSection.swift */,
 				2177B807BD48BC2FFA77E338 /* LexiconSettingsSection.swift */,
 				EF2DF3F8469ADD232637074D /* MediaSettingsSection.swift */,
 				E83CDEC66946DDEA4016486C /* MenuBarController.swift */,
@@ -255,6 +258,7 @@
 				BCB15D5D18379067E27BD080 /* HistoryView.swift in Sources */,
 				666CED5D1B1BDC82D890868D /* InsertionSettingsSection.swift in Sources */,
 				B06B10DCB1CE55AC401F2664 /* LaunchAtLoginService.swift in Sources */,
+				A79862E484C44CE3B0C0CB04 /* LearningSettingsSection.swift in Sources */,
 				264ECB25F8FA5A0DED8C9211 /* LexiconSettingsSection.swift in Sources */,
 				5C98414E6167A3E1644D9675 /* MediaSettingsSection.swift in Sources */,
 				36311BEA0ED488DD47320311 /* MenuBarController.swift in Sources */,

@@ -23,6 +23,7 @@ struct SettingsView: View {
                 CleanupStyleSettingsSection(preferences: $preferencesDraft)
                 SnippetsSettingsSection(preferences: $preferencesDraft)
                 VoiceCommandsSettingsSection(preferences: $preferencesDraft)
+                LearningSettingsSection()
                 GeneralSettingsSection(
                     preferences: $preferencesDraft,
                     launchAtLoginWarning: controller.launchAtLoginWarning
